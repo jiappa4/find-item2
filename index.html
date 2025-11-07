@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>가격 비교 도구 - 최저가 찾기</title>
+    <title>가격 비교 검색 - 실시간 최저가</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @keyframes fadeIn {
@@ -13,14 +13,25 @@
         .fade-in {
             animation: fadeIn 0.3s ease-out;
         }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-purple-500 to-purple-700 min-h-screen p-6">
     <div class="max-w-6xl mx-auto">
         <!-- Header -->
         <div class="text-center text-white mb-8">
-            <h1 class="text-4xl font-bold mb-2">🔍 가격 비교 도구</h1>
-            <p class="text-lg opacity-90">직접 가격을 입력하여 최저가를 비교하세요</p>
+            <h1 class="text-4xl font-bold mb-2">🔍 가격 비교 검색</h1>
+            <p class="text-lg opacity-90">실시간 최저가 자동 수집 시스템</p>
         </div>
 
         <!-- Search Card -->
@@ -32,46 +43,35 @@
                     class="flex-1 min-w-[300px] px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none text-lg"
                     placeholder="검색할 상품명 입력 (예: 신일 팬히터 1200)"
                     value="신일 팬히터 1200"
+                    onkeypress="if(event.key==='Enter') searchProducts()"
                 />
                 <button
-                    onclick="openShoppingSearch()"
+                    onclick="searchProducts()"
+                    id="searchBtn"
                     class="px-8 py-3 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-lg font-semibold hover:shadow-lg transition"
                 >
-                    🛒 쇼핑몰 열기
-                </button>
-                <button
-                    onclick="toggleAddForm()"
-                    id="addBtn"
-                    class="px-8 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition"
-                >
-                    ➕ 추가
+                    🔍 검색
                 </button>
             </div>
             
             <div class="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
                 <span>💡</span>
-                <p><strong>사용법:</strong> "쇼핑몰 열기" 버튼으로 각 사이트를 확인한 후, 가격을 직접 입력하세요</p>
+                <p><strong>자동 수집:</strong> 배치로 수집된 실시간 가격 정보를 제공합니다</p>
             </div>
 
-            <!-- Add Product Form -->
-            <div id="addForm" class="hidden mt-6 p-6 bg-gray-50 rounded-lg border-2 border-purple-200 fade-in">
-                <h3 class="text-lg font-bold mb-4">상품 추가하기</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input type="text" id="shop" placeholder="쇼핑몰 (예: 네이버쇼핑)" class="px-4 py-2 border rounded-lg focus:border-purple-500 focus:outline-none" />
-                    <input type="text" id="name" placeholder="상품명" class="px-4 py-2 border rounded-lg focus:border-purple-500 focus:outline-none" />
-                    <input type="text" id="option" placeholder="옵션 (선택)" value="단일" class="px-4 py-2 border rounded-lg focus:border-purple-500 focus:outline-none" />
-                    <input type="number" id="originalPrice" placeholder="정가 (선택)" class="px-4 py-2 border rounded-lg focus:border-purple-500 focus:outline-none" />
-                    <input type="number" id="discountPrice" placeholder="할인가 (필수)" class="px-4 py-2 border rounded-lg focus:border-purple-500 focus:outline-none" />
-                    <input type="number" id="shipping" placeholder="배송비 (무료면 0)" value="0" class="px-4 py-2 border rounded-lg focus:border-purple-500 focus:outline-none" />
-                    <input type="text" id="link" placeholder="링크 (선택)" class="px-4 py-2 border rounded-lg col-span-full focus:border-purple-500 focus:outline-none" />
+            <!-- API 상태 -->
+            <div id="apiStatus" class="hidden mt-4 p-3 rounded-lg">
+                <div class="flex items-center gap-2">
+                    <span id="statusIcon">⚠️</span>
+                    <span id="statusText" class="font-semibold"></span>
                 </div>
-                <button
-                    onclick="addProduct()"
-                    class="mt-4 w-full py-3 bg-purple-500 text-white rounded-lg font-semibold hover:bg-purple-600 transition"
-                >
-                    추가하기
-                </button>
             </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="hidden bg-white rounded-2xl shadow-xl p-16 text-center mb-6">
+            <div class="spinner mx-auto mb-4"></div>
+            <p class="text-gray-600 text-lg">검색 중...</p>
         </div>
 
         <!-- Summary -->
@@ -86,7 +86,7 @@
                     <div id="avgPrice" class="text-2xl font-bold text-purple-600">-</div>
                 </div>
                 <div class="text-center">
-                    <div class="text-sm text-gray-600 mb-1">등록 상품</div>
+                    <div class="text-sm text-gray-600 mb-1">검색 결과</div>
                     <div id="totalCount" class="text-2xl font-bold text-purple-600">0개</div>
                 </div>
                 <div class="text-center">
@@ -94,16 +94,19 @@
                     <div id="freeShipping" class="text-2xl font-bold text-purple-600">0%</div>
                 </div>
             </div>
+            <div class="mt-4 text-center text-sm text-gray-500">
+                <span id="updateTime">마지막 업데이트: -</span>
+            </div>
         </div>
 
         <!-- Results -->
         <div id="resultsContainer" class="bg-white rounded-2xl shadow-xl overflow-hidden">
             <div id="emptyState" class="p-16 text-center">
-                <div class="text-6xl mb-4">📝</div>
-                <h3 class="text-2xl font-bold text-gray-700 mb-2">상품을 추가해주세요</h3>
+                <div class="text-6xl mb-4">🔍</div>
+                <h3 class="text-2xl font-bold text-gray-700 mb-2">상품을 검색해주세요</h3>
                 <p class="text-gray-500">
-                    "쇼핑몰 열기" 버튼으로 가격을 확인한 후<br/>
-                    "➕ 추가" 버튼으로 상품을 등록하세요
+                    검색어를 입력하고 검색 버튼을 클릭하세요<br/>
+                    배치로 수집된 최신 가격 정보를 보여드립니다
                 </p>
             </div>
 
@@ -121,7 +124,6 @@
                                 <th class="px-4 py-3 text-left">배송비</th>
                                 <th class="px-4 py-3 text-left">최저실현가</th>
                                 <th class="px-4 py-3 text-left">링크</th>
-                                <th class="px-4 py-3 text-left">삭제</th>
                             </tr>
                         </thead>
                         <tbody id="tableBody">
@@ -139,7 +141,8 @@
     </div>
 
     <script>
-        let products = [];
+        const API_BASE_URL = 'http://localhost:5000/api';
+        let currentProducts = [];
 
         function formatPrice(price) {
             if (!price) return '0원';
@@ -152,115 +155,93 @@
             return `<div class="flex items-center justify-center w-8 h-8 rounded-full text-white font-bold" style="background: ${color}">${index + 1}</div>`;
         }
 
-        function openShoppingSearch() {
-            const query = document.getElementById('searchQuery').value;
-            if (!query.trim()) {
+        function showApiStatus(type, message) {
+            const statusDiv = document.getElementById('apiStatus');
+            const statusIcon = document.getElementById('statusIcon');
+            const statusText = document.getElementById('statusText');
+            
+            statusDiv.classList.remove('hidden', 'bg-red-50', 'bg-green-50', 'bg-yellow-50');
+            
+            if (type === 'error') {
+                statusDiv.classList.add('bg-red-50');
+                statusIcon.textContent = '❌';
+                statusText.textContent = message;
+                statusText.className = 'font-semibold text-red-700';
+            } else if (type === 'success') {
+                statusDiv.classList.add('bg-green-50');
+                statusIcon.textContent = '✅';
+                statusText.textContent = message;
+                statusText.className = 'font-semibold text-green-700';
+            } else {
+                statusDiv.classList.add('bg-yellow-50');
+                statusIcon.textContent = '⚠️';
+                statusText.textContent = message;
+                statusText.className = 'font-semibold text-yellow-700';
+            }
+        }
+
+        async function searchProducts() {
+            const query = document.getElementById('searchQuery').value.trim();
+            
+            if (!query) {
                 alert('검색어를 입력해주세요!');
                 return;
             }
 
-            const shops = [
-                `네이버쇼핑 ${query}`,
-                `쿠팡 ${query}`,
-                `11번가 ${query}`,
-                `G마켓 ${query}`,
-                `옥션 ${query}`
-            ];
-
-            shops.forEach(shop => {
-                window.open(`https://search.naver.com/search.naver?query=${encodeURIComponent(shop)}`, '_blank');
-            });
-        }
-
-        function toggleAddForm() {
-            const form = document.getElementById('addForm');
-            const btn = document.getElementById('addBtn');
-            const isHidden = form.classList.contains('hidden');
-            
-            if (isHidden) {
-                form.classList.remove('hidden');
-                btn.textContent = '❌ 취소';
-                btn.classList.remove('bg-green-500', 'hover:bg-green-600');
-                btn.classList.add('bg-red-500', 'hover:bg-red-600');
-            } else {
-                form.classList.add('hidden');
-                btn.textContent = '➕ 추가';
-                btn.classList.remove('bg-red-500', 'hover:bg-red-600');
-                btn.classList.add('bg-green-500', 'hover:bg-green-600');
-            }
-        }
-
-        function addProduct() {
-            const shop = document.getElementById('shop').value;
-            const name = document.getElementById('name').value;
-            const option = document.getElementById('option').value || '단일';
-            const originalPrice = parseInt(document.getElementById('originalPrice').value) || 0;
-            const discountPrice = parseInt(document.getElementById('discountPrice').value);
-            const shipping = parseInt(document.getElementById('shipping').value) || 0;
-            const link = document.getElementById('link').value;
-
-            if (!shop || !name || !discountPrice) {
-                alert('필수 항목을 모두 입력해주세요!\n(쇼핑몰, 상품명, 할인가)');
-                return;
-            }
-
-            const product = {
-                shop,
-                name,
-                option,
-                originalPrice: originalPrice || discountPrice,
-                discountPrice,
-                shipping,
-                finalPrice: discountPrice + shipping,
-                link
-            };
-
-            products.push(product);
-            products.sort((a, b) => a.finalPrice - b.finalPrice);
-
-            // Clear form
-            document.getElementById('shop').value = '';
-            document.getElementById('name').value = '';
-            document.getElementById('option').value = '단일';
-            document.getElementById('originalPrice').value = '';
-            document.getElementById('discountPrice').value = '';
-            document.getElementById('shipping').value = '0';
-            document.getElementById('link').value = '';
-
-            toggleAddForm();
-            renderResults();
-        }
-
-        function deleteProduct(index) {
-            if (confirm('이 상품을 삭제하시겠습니까?')) {
-                products.splice(index, 1);
-                renderResults();
-            }
-        }
-
-        function renderResults() {
-            if (products.length === 0) {
-                document.getElementById('emptyState').classList.remove('hidden');
-                document.getElementById('resultsTable').classList.add('hidden');
-                document.getElementById('summary').classList.add('hidden');
-                return;
-            }
-
+            // UI 초기화
+            document.getElementById('loading').classList.remove('hidden');
             document.getElementById('emptyState').classList.add('hidden');
-            document.getElementById('resultsTable').classList.remove('hidden');
-            document.getElementById('summary').classList.remove('hidden');
+            document.getElementById('resultsTable').classList.add('hidden');
+            document.getElementById('summary').classList.add('hidden');
+            document.getElementById('apiStatus').classList.add('hidden');
+            document.getElementById('searchBtn').disabled = true;
 
-            // Update summary
-            const avgPrice = Math.round(products.reduce((sum, p) => sum + p.finalPrice, 0) / products.length);
-            const freeShippingCount = products.filter(p => p.shipping === 0).length;
-            const freeShippingRate = Math.round((freeShippingCount / products.length) * 100);
+            try {
+                const response = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(query)}`);
+                
+                if (!response.ok) {
+                    throw new Error('API 호출 실패');
+                }
 
-            document.getElementById('lowestPrice').textContent = formatPrice(products[0].finalPrice);
-            document.getElementById('avgPrice').textContent = formatPrice(avgPrice);
-            document.getElementById('totalCount').textContent = products.length + '개';
-            document.getElementById('freeShipping').textContent = freeShippingRate + '%';
+                const data = await response.json();
+                currentProducts = data.products || [];
 
-            // Render table
+                if (currentProducts.length === 0) {
+                    showApiStatus('warning', '검색 결과가 없습니다. 배치를 실행하여 데이터를 수집해주세요.');
+                    document.getElementById('emptyState').classList.remove('hidden');
+                } else {
+                    showApiStatus('success', `${currentProducts.length}개의 상품을 찾았습니다!`);
+                    renderResults(data);
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                showApiStatus('error', 'API 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인하세요.');
+                document.getElementById('emptyState').classList.remove('hidden');
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('searchBtn').disabled = false;
+            }
+        }
+
+        function renderResults(data) {
+            const products = data.products;
+            const summary = data.summary;
+
+            // Summary 업데이트
+            if (summary) {
+                document.getElementById('lowestPrice').textContent = formatPrice(summary.lowestPrice);
+                document.getElementById('avgPrice').textContent = formatPrice(summary.avgPrice);
+                document.getElementById('totalCount').textContent = summary.totalCount + '개';
+                document.getElementById('freeShipping').textContent = summary.freeShippingRate + '%';
+                document.getElementById('summary').classList.remove('hidden');
+            }
+
+            // 업데이트 시간
+            const updateTime = new Date(data.updatedAt).toLocaleString('ko-KR');
+            document.getElementById('updateTime').textContent = `마지막 업데이트: ${updateTime}`;
+
+            // 테이블 렌더링
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = products.map((item, index) => `
                 <tr class="border-b hover:bg-gray-50 fade-in">
@@ -271,7 +252,7 @@
                         </span>
                     </td>
                     <td class="px-4 py-3 font-medium">${item.name}</td>
-                    <td class="px-4 py-3 text-sm text-gray-600">${item.option}</td>
+                    <td class="px-4 py-3 text-sm text-gray-600">${item.option || '단일'}</td>
                     <td class="px-4 py-3 text-gray-400 line-through text-sm">
                         ${formatPrice(item.originalPrice)}
                     </td>
@@ -296,27 +277,41 @@
                             </a>
                         ` : '<span class="text-gray-400 text-sm">-</span>'}
                     </td>
-                    <td class="px-4 py-3">
-                        <button onclick="deleteProduct(${index})"
-                                class="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600">
-                            삭제
-                        </button>
-                    </td>
                 </tr>
             `).join('');
 
-            // Render analysis
+            // 분석 텍스트
             const priceDiff = products[products.length - 1].finalPrice - products[0].finalPrice;
+            const freeShippingCount = products.filter(p => p.shipping === 0).length;
+            
             document.getElementById('analysisText').innerHTML = `
                 <li><strong>최저실현가:</strong> ${products[0].shop}에서 ${formatPrice(products[0].finalPrice)}</li>
                 <li><strong>가격 범위:</strong> ${formatPrice(products[0].finalPrice)} ~ ${formatPrice(products[products.length - 1].finalPrice)}</li>
-                <li><strong>가격 차이:</strong> ${formatPrice(priceDiff)}</li>
-                <li><strong>무료배송:</strong> ${freeShippingCount}개 / ${products.length}개</li>
+                <li><strong>가격 차이:</strong> ${formatPrice(priceDiff)} (${((priceDiff/products[0].finalPrice)*100).toFixed(1)}%)</li>
+                <li><strong>무료배송:</strong> ${freeShippingCount}개 / ${products.length}개 (${summary.freeShippingRate}%)</li>
             `;
+
+            document.getElementById('resultsTable').classList.remove('hidden');
         }
 
-        // Initialize
-        renderResults();
+        // 페이지 로드 시 API 상태 체크
+        async function checkApiStatus() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                if (response.ok) {
+                    showApiStatus('success', 'API 서버 연결 완료');
+                } else {
+                    throw new Error('API not responding');
+                }
+            } catch (error) {
+                showApiStatus('error', 'API 서버가 실행되지 않았습니다. backend/run_api.bat을 실행하세요.');
+            }
+        }
+
+        // 초기화
+        window.addEventListener('load', () => {
+            checkApiStatus();
+        });
     </script>
 </body>
 </html>
