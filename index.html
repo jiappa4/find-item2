@@ -3,601 +3,320 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>가격 비교 검색 - 최저가 찾기</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <title>가격 비교 도구 - 최저가 찾기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .header {
-            text-align: center;
-            color: white;
-            margin-bottom: 40px;
-        }
-
-        .header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .header p {
-            font-size: 1.1rem;
-            opacity: 0.95;
-        }
-
-        .search-card {
-            background: white;
-            border-radius: 16px;
-            padding: 30px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
-        }
-
-        .search-box {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .search-input {
-            flex: 1;
-            padding: 15px 20px;
-            font-size: 16px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            transition: all 0.3s;
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .search-btn {
-            padding: 15px 40px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        .search-btn:hover {
-            transform: translateY(-2px);
-        }
-
-        .search-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #667eea;
-            font-size: 18px;
-        }
-
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .results-card {
-            background: white;
-            border-radius: 16px;
-            padding: 30px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-        }
-
-        .results-header {
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #f0f0f0;
-        }
-
-        .results-header h2 {
-            color: #333;
-            font-size: 1.8rem;
-            margin-bottom: 10px;
-        }
-
-        .summary {
-            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 25px;
-        }
-
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-
-        .summary-item {
-            text-align: center;
-        }
-
-        .summary-label {
-            font-size: 0.9rem;
-            color: #666;
-            margin-bottom: 5px;
-        }
-
-        .summary-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #667eea;
-        }
-
-        .table-container {
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px;
-            text-align: left;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        th:first-child {
-            border-top-left-radius: 10px;
-        }
-
-        th:last-child {
-            border-top-right-radius: 10px;
-        }
-
-        td {
-            padding: 15px;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        tr:hover {
-            background: #f9f9f9;
-        }
-
-        .rank-badge {
-            display: inline-block;
-            width: 30px;
-            height: 30px;
-            line-height: 30px;
-            text-align: center;
-            border-radius: 50%;
-            font-weight: 700;
-            color: white;
-        }
-
-        .rank-1 { background: linear-gradient(135deg, #FFD700, #FFA500); }
-        .rank-2 { background: linear-gradient(135deg, #C0C0C0, #A9A9A9); }
-        .rank-3 { background: linear-gradient(135deg, #CD7F32, #8B4513); }
-        .rank-other { background: linear-gradient(135deg, #667eea, #764ba2); }
-
-        .shop-badge {
-            display: inline-block;
-            padding: 5px 12px;
-            background: #f0f0f0;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #555;
-        }
-
-        .price {
-            font-weight: 700;
-            color: #333;
-        }
-
-        .original-price {
-            text-decoration: line-through;
-            color: #999;
-            font-size: 0.9rem;
-            margin-right: 8px;
-        }
-
-        .discount-price {
-            color: #e91e63;
-            font-size: 1.1rem;
-        }
-
-        .final-price {
-            color: #667eea;
-            font-size: 1.2rem;
-            font-weight: 700;
-        }
-
-        .shipping {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 5px;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-
-        .shipping-free {
-            background: #4caf50;
-            color: white;
-        }
-
-        .shipping-paid {
-            background: #ff9800;
-            color: white;
-        }
-
-        .link-btn {
-            display: inline-block;
-            padding: 8px 16px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            text-decoration: none;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            transition: transform 0.2s;
-        }
-
-        .link-btn:hover {
-            transform: translateY(-2px);
-        }
-
-        .no-results {
-            text-align: center;
-            padding: 60px 20px;
-            color: #999;
-        }
-
-        .no-results-icon {
-            font-size: 4rem;
-            margin-bottom: 20px;
-        }
-
-        @media (max-width: 768px) {
-            .header h1 {
-                font-size: 1.8rem;
-            }
-
-            .search-box {
-                flex-direction: column;
-            }
-
-            .summary-grid {
-                grid-template-columns: 1fr;
-            }
-
-            table {
-                font-size: 0.85rem;
-            }
-
-            th, td {
-                padding: 10px;
-            }
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
         }
     </style>
 </head>
-<body>
-    <div id="root"></div>
+<body class="bg-gradient-to-br from-purple-500 to-purple-700 min-h-screen p-6">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="text-center text-white mb-8">
+            <h1 class="text-4xl font-bold mb-2">🔍 가격 비교 도구</h1>
+            <p class="text-lg opacity-90">직접 가격을 입력하여 최저가를 비교하세요</p>
+        </div>
 
-    <script type="text/babel">
-        const { useState, useEffect } = React;
+        <!-- Search Card -->
+        <div class="bg-white rounded-2xl shadow-xl p-8 mb-6">
+            <div class="flex gap-4 mb-4 flex-wrap">
+                <input
+                    type="text"
+                    id="searchQuery"
+                    class="flex-1 min-w-[300px] px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none text-lg"
+                    placeholder="검색할 상품명 입력 (예: 신일 팬히터 1200)"
+                    value="신일 팬히터 1200"
+                />
+                <button
+                    onclick="openShoppingSearch()"
+                    class="px-8 py-3 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-lg font-semibold hover:shadow-lg transition"
+                >
+                    🛒 쇼핑몰 열기
+                </button>
+                <button
+                    onclick="toggleAddForm()"
+                    id="addBtn"
+                    class="px-8 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition"
+                >
+                    ➕ 추가
+                </button>
+            </div>
+            
+            <div class="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                <span>💡</span>
+                <p><strong>사용법:</strong> "쇼핑몰 열기" 버튼으로 각 사이트를 확인한 후, 가격을 직접 입력하세요</p>
+            </div>
 
-        function App() {
-            const [searchQuery, setSearchQuery] = useState('신일 팬히터 1200');
-            const [loading, setLoading] = useState(false);
-            const [results, setResults] = useState([]);
-
-            const formatPrice = (price) => {
-                if (typeof price === 'number') {
-                    return price.toLocaleString('ko-KR') + '원';
-                }
-                return price;
-            };
-
-            const searchProducts = async () => {
-                if (!searchQuery.trim()) {
-                    alert('검색어를 입력해주세요.');
-                    return;
-                }
-
-                setLoading(true);
-                
-                try {
-                    // 실제 API 호출 시뮬레이션 (실제로는 백엔드 API가 필요합니다)
-                    // 데모 데이터로 대체
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    
-                    const demoData = [
-                        {
-                            shop: '네이버쇼핑',
-                            name: '신일 팬히터 SPH-1200 화이트',
-                            option: '단일',
-                            originalPrice: 49900,
-                            discountPrice: 38900,
-                            shipping: 0,
-                            finalPrice: 38900,
-                            link: 'https://shopping.naver.com'
-                        },
-                        {
-                            shop: '쿠팡',
-                            name: '신일 팬히터 1200W',
-                            option: '단일',
-                            originalPrice: 45900,
-                            discountPrice: 39900,
-                            shipping: 3000,
-                            finalPrice: 42900,
-                            link: 'https://www.coupang.com'
-                        },
-                        {
-                            shop: '11번가',
-                            name: '신일 팬히터 SPH-1200',
-                            option: '화이트',
-                            originalPrice: 52000,
-                            discountPrice: 41000,
-                            shipping: 2500,
-                            finalPrice: 43500,
-                            link: 'https://www.11st.co.kr'
-                        },
-                        {
-                            shop: 'G마켓',
-                            name: '신일전자 팬히터 1200W',
-                            option: '단일',
-                            originalPrice: 48900,
-                            discountPrice: 40900,
-                            shipping: 0,
-                            finalPrice: 40900,
-                            link: 'https://www.gmarket.co.kr'
-                        },
-                        {
-                            shop: '옥션',
-                            name: '신일 팬히터 SPH-1200',
-                            option: '단일',
-                            originalPrice: 47900,
-                            discountPrice: 39900,
-                            shipping: 2000,
-                            finalPrice: 41900,
-                            link: 'https://www.auction.co.kr'
-                        }
-                    ];
-
-                    const sortedData = demoData.sort((a, b) => a.finalPrice - b.finalPrice);
-                    setResults(sortedData);
-                } catch (error) {
-                    console.error('검색 중 오류:', error);
-                    alert('검색 중 오류가 발생했습니다.');
-                } finally {
-                    setLoading(false);
-                }
-            };
-
-            const handleKeyPress = (e) => {
-                if (e.key === 'Enter') {
-                    searchProducts();
-                }
-            };
-
-            const getRankBadgeClass = (index) => {
-                if (index === 0) return 'rank-badge rank-1';
-                if (index === 1) return 'rank-badge rank-2';
-                if (index === 2) return 'rank-badge rank-3';
-                return 'rank-badge rank-other';
-            };
-
-            const calculateSummary = () => {
-                if (results.length === 0) return null;
-
-                const avgPrice = Math.round(
-                    results.reduce((sum, item) => sum + item.finalPrice, 0) / results.length
-                );
-                const lowestPrice = results[0].finalPrice;
-                const freeShippingCount = results.filter(item => item.shipping === 0).length;
-
-                return {
-                    totalResults: results.length,
-                    avgPrice,
-                    lowestPrice,
-                    freeShippingRate: Math.round((freeShippingCount / results.length) * 100)
-                };
-            };
-
-            const summary = calculateSummary();
-
-            return (
-                <div className="container">
-                    <div className="header">
-                        <h1>🔍 가격 비교 검색</h1>
-                        <p>주요 쇼핑몰의 최저가를 한눈에 비교하세요</p>
-                    </div>
-
-                    <div className="search-card">
-                        <div className="search-box">
-                            <input
-                                type="text"
-                                className="search-input"
-                                placeholder="검색할 상품명을 입력하세요 (예: 신일 팬히터 1200)"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                onKeyPress={handleKeyPress}
-                            />
-                            <button 
-                                className="search-btn" 
-                                onClick={searchProducts}
-                                disabled={loading}
-                            >
-                                {loading ? '검색 중...' : '검색하기'}
-                            </button>
-                        </div>
-                        <p style={{color: '#666', fontSize: '0.9rem'}}>
-                            💡 <strong>주요 검색 쇼핑몰:</strong> 네이버쇼핑, 쿠팡, 11번가, G마켓, 옥션, 인터파크, SSG 등
-                        </p>
-                    </div>
-
-                    {loading && (
-                        <div className="search-card">
-                            <div className="loading">
-                                <div className="spinner"></div>
-                                <p>주요 쇼핑몰에서 "{searchQuery}" 검색 중...</p>
-                            </div>
-                        </div>
-                    )}
-
-                    {!loading && results.length > 0 && (
-                        <div className="results-card">
-                            <div className="results-header">
-                                <h2>검색 결과: {searchQuery}</h2>
-                                <p style={{color: '#666', marginTop: '5px'}}>
-                                    총 {results.length}개 상품 발견 • 최저실현가 기준 정렬
-                                </p>
-                            </div>
-
-                            {summary && (
-                                <div className="summary">
-                                    <div className="summary-grid">
-                                        <div className="summary-item">
-                                            <div className="summary-label">최저실현가</div>
-                                            <div className="summary-value">{formatPrice(summary.lowestPrice)}</div>
-                                        </div>
-                                        <div className="summary-item">
-                                            <div className="summary-label">평균 가격</div>
-                                            <div className="summary-value">{formatPrice(summary.avgPrice)}</div>
-                                        </div>
-                                        <div className="summary-item">
-                                            <div className="summary-label">검색 결과</div>
-                                            <div className="summary-value">{summary.totalResults}개</div>
-                                        </div>
-                                        <div className="summary-item">
-                                            <div className="summary-label">무료배송 비중</div>
-                                            <div className="summary-value">{summary.freeShippingRate}%</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="table-container">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>순위</th>
-                                            <th>쇼핑몰</th>
-                                            <th>상품명</th>
-                                            <th>옵션</th>
-                                            <th>정가</th>
-                                            <th>할인가</th>
-                                            <th>배송비</th>
-                                            <th>최저실현가</th>
-                                            <th>링크</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {results.map((item, index) => (
-                                            <tr key={index}>
-                                                <td>
-                                                    <span className={getRankBadgeClass(index)}>
-                                                        {index + 1}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <span className="shop-badge">{item.shop}</span>
-                                                </td>
-                                                <td style={{minWidth: '200px'}}>{item.name}</td>
-                                                <td>{item.option}</td>
-                                                <td>
-                                                    <span className="original-price">
-                                                        {formatPrice(item.originalPrice)}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <span className="discount-price">
-                                                        {formatPrice(item.discountPrice)}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <span className={item.shipping === 0 ? 'shipping shipping-free' : 'shipping shipping-paid'}>
-                                                        {item.shipping === 0 ? '무료' : formatPrice(item.shipping)}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <span className="final-price">
-                                                        {formatPrice(item.finalPrice)}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <a href={item.link} target="_blank" rel="noopener noreferrer" className="link-btn">
-                                                        바로가기
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <div style={{marginTop: '25px', padding: '15px', background: '#f9f9f9', borderRadius: '10px'}}>
-                                <h3 style={{marginBottom: '10px', color: '#333'}}>📊 분석 요약</h3>
-                                <ul style={{lineHeight: '1.8', color: '#666'}}>
-                                    <li><strong>최저실현가:</strong> {results[0].shop}에서 {formatPrice(results[0].finalPrice)}</li>
-                                    <li><strong>가격 범위:</strong> {formatPrice(results[0].finalPrice)} ~ {formatPrice(results[results.length-1].finalPrice)}</li>
-                                    <li><strong>무료배송 비중:</strong> {summary.freeShippingRate}% ({results.filter(r => r.shipping === 0).length}/{results.length}개)</li>
-                                    <li><strong>평균 할인율:</strong> {Math.round(results.reduce((sum, item) => 
-                                        sum + ((item.originalPrice - item.discountPrice) / item.originalPrice * 100), 0) / results.length)}%</li>
-                                </ul>
-                            </div>
-                        </div>
-                    )}
-
-                    {!loading && results.length === 0 && searchQuery && (
-                        <div className="results-card">
-                            <div className="no-results">
-                                <div className="no-results-icon">🔍</div>
-                                <h3>검색 결과가 없습니다</h3>
-                                <p style={{marginTop: '10px'}}>다른 검색어로 시도해보세요</p>
-                            </div>
-                        </div>
-                    )}
+            <!-- Add Product Form -->
+            <div id="addForm" class="hidden mt-6 p-6 bg-gray-50 rounded-lg border-2 border-purple-200 fade-in">
+                <h3 class="text-lg font-bold mb-4">상품 추가하기</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="text" id="shop" placeholder="쇼핑몰 (예: 네이버쇼핑)" class="px-4 py-2 border rounded-lg focus:border-purple-500 focus:outline-none" />
+                    <input type="text" id="name" placeholder="상품명" class="px-4 py-2 border rounded-lg focus:border-purple-500 focus:outline-none" />
+                    <input type="text" id="option" placeholder="옵션 (선택)" value="단일" class="px-4 py-2 border rounded-lg focus:border-purple-500 focus:outline-none" />
+                    <input type="number" id="originalPrice" placeholder="정가 (선택)" class="px-4 py-2 border rounded-lg focus:border-purple-500 focus:outline-none" />
+                    <input type="number" id="discountPrice" placeholder="할인가 (필수)" class="px-4 py-2 border rounded-lg focus:border-purple-500 focus:outline-none" />
+                    <input type="number" id="shipping" placeholder="배송비 (무료면 0)" value="0" class="px-4 py-2 border rounded-lg focus:border-purple-500 focus:outline-none" />
+                    <input type="text" id="link" placeholder="링크 (선택)" class="px-4 py-2 border rounded-lg col-span-full focus:border-purple-500 focus:outline-none" />
                 </div>
-            );
+                <button
+                    onclick="addProduct()"
+                    class="mt-4 w-full py-3 bg-purple-500 text-white rounded-lg font-semibold hover:bg-purple-600 transition"
+                >
+                    추가하기
+                </button>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div id="summary" class="hidden bg-white rounded-2xl shadow-xl p-6 mb-6 fade-in">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="text-center">
+                    <div class="text-sm text-gray-600 mb-1">최저실현가</div>
+                    <div id="lowestPrice" class="text-2xl font-bold text-purple-600">-</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-sm text-gray-600 mb-1">평균 가격</div>
+                    <div id="avgPrice" class="text-2xl font-bold text-purple-600">-</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-sm text-gray-600 mb-1">등록 상품</div>
+                    <div id="totalCount" class="text-2xl font-bold text-purple-600">0개</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-sm text-gray-600 mb-1">무료배송</div>
+                    <div id="freeShipping" class="text-2xl font-bold text-purple-600">0%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div id="resultsContainer" class="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div id="emptyState" class="p-16 text-center">
+                <div class="text-6xl mb-4">📝</div>
+                <h3 class="text-2xl font-bold text-gray-700 mb-2">상품을 추가해주세요</h3>
+                <p class="text-gray-500">
+                    "쇼핑몰 열기" 버튼으로 가격을 확인한 후<br/>
+                    "➕ 추가" 버튼으로 상품을 등록하세요
+                </p>
+            </div>
+
+            <div id="resultsTable" class="hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gradient-to-r from-purple-500 to-purple-700 text-white">
+                            <tr>
+                                <th class="px-4 py-3 text-left">순위</th>
+                                <th class="px-4 py-3 text-left">쇼핑몰</th>
+                                <th class="px-4 py-3 text-left">상품명</th>
+                                <th class="px-4 py-3 text-left">옵션</th>
+                                <th class="px-4 py-3 text-left">정가</th>
+                                <th class="px-4 py-3 text-left">할인가</th>
+                                <th class="px-4 py-3 text-left">배송비</th>
+                                <th class="px-4 py-3 text-left">최저실현가</th>
+                                <th class="px-4 py-3 text-left">링크</th>
+                                <th class="px-4 py-3 text-left">삭제</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="p-6 bg-gray-50">
+                    <h3 class="text-lg font-bold mb-3">📊 분석 요약</h3>
+                    <ul id="analysisText" class="space-y-2 text-gray-700">
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let products = [];
+
+        function formatPrice(price) {
+            if (!price) return '0원';
+            return parseInt(price).toLocaleString('ko-KR') + '원';
         }
 
-        ReactDOM.render(<App />, document.getElementById('root'));
+        function getRankBadge(index) {
+            const colors = ['#FFD700', '#C0C0C0', '#CD7F32', '#667eea'];
+            const color = colors[Math.min(index, 3)];
+            return `<div class="flex items-center justify-center w-8 h-8 rounded-full text-white font-bold" style="background: ${color}">${index + 1}</div>`;
+        }
+
+        function openShoppingSearch() {
+            const query = document.getElementById('searchQuery').value;
+            if (!query.trim()) {
+                alert('검색어를 입력해주세요!');
+                return;
+            }
+
+            const shops = [
+                `네이버쇼핑 ${query}`,
+                `쿠팡 ${query}`,
+                `11번가 ${query}`,
+                `G마켓 ${query}`,
+                `옥션 ${query}`
+            ];
+
+            shops.forEach(shop => {
+                window.open(`https://search.naver.com/search.naver?query=${encodeURIComponent(shop)}`, '_blank');
+            });
+        }
+
+        function toggleAddForm() {
+            const form = document.getElementById('addForm');
+            const btn = document.getElementById('addBtn');
+            const isHidden = form.classList.contains('hidden');
+            
+            if (isHidden) {
+                form.classList.remove('hidden');
+                btn.textContent = '❌ 취소';
+                btn.classList.remove('bg-green-500', 'hover:bg-green-600');
+                btn.classList.add('bg-red-500', 'hover:bg-red-600');
+            } else {
+                form.classList.add('hidden');
+                btn.textContent = '➕ 추가';
+                btn.classList.remove('bg-red-500', 'hover:bg-red-600');
+                btn.classList.add('bg-green-500', 'hover:bg-green-600');
+            }
+        }
+
+        function addProduct() {
+            const shop = document.getElementById('shop').value;
+            const name = document.getElementById('name').value;
+            const option = document.getElementById('option').value || '단일';
+            const originalPrice = parseInt(document.getElementById('originalPrice').value) || 0;
+            const discountPrice = parseInt(document.getElementById('discountPrice').value);
+            const shipping = parseInt(document.getElementById('shipping').value) || 0;
+            const link = document.getElementById('link').value;
+
+            if (!shop || !name || !discountPrice) {
+                alert('필수 항목을 모두 입력해주세요!\n(쇼핑몰, 상품명, 할인가)');
+                return;
+            }
+
+            const product = {
+                shop,
+                name,
+                option,
+                originalPrice: originalPrice || discountPrice,
+                discountPrice,
+                shipping,
+                finalPrice: discountPrice + shipping,
+                link
+            };
+
+            products.push(product);
+            products.sort((a, b) => a.finalPrice - b.finalPrice);
+
+            // Clear form
+            document.getElementById('shop').value = '';
+            document.getElementById('name').value = '';
+            document.getElementById('option').value = '단일';
+            document.getElementById('originalPrice').value = '';
+            document.getElementById('discountPrice').value = '';
+            document.getElementById('shipping').value = '0';
+            document.getElementById('link').value = '';
+
+            toggleAddForm();
+            renderResults();
+        }
+
+        function deleteProduct(index) {
+            if (confirm('이 상품을 삭제하시겠습니까?')) {
+                products.splice(index, 1);
+                renderResults();
+            }
+        }
+
+        function renderResults() {
+            if (products.length === 0) {
+                document.getElementById('emptyState').classList.remove('hidden');
+                document.getElementById('resultsTable').classList.add('hidden');
+                document.getElementById('summary').classList.add('hidden');
+                return;
+            }
+
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('resultsTable').classList.remove('hidden');
+            document.getElementById('summary').classList.remove('hidden');
+
+            // Update summary
+            const avgPrice = Math.round(products.reduce((sum, p) => sum + p.finalPrice, 0) / products.length);
+            const freeShippingCount = products.filter(p => p.shipping === 0).length;
+            const freeShippingRate = Math.round((freeShippingCount / products.length) * 100);
+
+            document.getElementById('lowestPrice').textContent = formatPrice(products[0].finalPrice);
+            document.getElementById('avgPrice').textContent = formatPrice(avgPrice);
+            document.getElementById('totalCount').textContent = products.length + '개';
+            document.getElementById('freeShipping').textContent = freeShippingRate + '%';
+
+            // Render table
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = products.map((item, index) => `
+                <tr class="border-b hover:bg-gray-50 fade-in">
+                    <td class="px-4 py-3">${getRankBadge(index)}</td>
+                    <td class="px-4 py-3">
+                        <span class="px-3 py-1 bg-gray-100 rounded-full text-sm font-semibold">
+                            ${item.shop}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 font-medium">${item.name}</td>
+                    <td class="px-4 py-3 text-sm text-gray-600">${item.option}</td>
+                    <td class="px-4 py-3 text-gray-400 line-through text-sm">
+                        ${formatPrice(item.originalPrice)}
+                    </td>
+                    <td class="px-4 py-3 text-pink-600 font-semibold">
+                        ${formatPrice(item.discountPrice)}
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 rounded text-xs font-semibold ${
+                            item.shipping === 0 ? 'bg-green-500 text-white' : 'bg-orange-500 text-white'
+                        }">
+                            ${item.shipping === 0 ? '무료' : formatPrice(item.shipping)}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-purple-600 font-bold text-lg">
+                        ${formatPrice(item.finalPrice)}
+                    </td>
+                    <td class="px-4 py-3">
+                        ${item.link ? `
+                            <a href="${item.link}" target="_blank" rel="noopener noreferrer"
+                               class="px-3 py-1 bg-purple-500 text-white rounded text-sm hover:bg-purple-600">
+                                이동
+                            </a>
+                        ` : '<span class="text-gray-400 text-sm">-</span>'}
+                    </td>
+                    <td class="px-4 py-3">
+                        <button onclick="deleteProduct(${index})"
+                                class="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600">
+                            삭제
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            // Render analysis
+            const priceDiff = products[products.length - 1].finalPrice - products[0].finalPrice;
+            document.getElementById('analysisText').innerHTML = `
+                <li><strong>최저실현가:</strong> ${products[0].shop}에서 ${formatPrice(products[0].finalPrice)}</li>
+                <li><strong>가격 범위:</strong> ${formatPrice(products[0].finalPrice)} ~ ${formatPrice(products[products.length - 1].finalPrice)}</li>
+                <li><strong>가격 차이:</strong> ${formatPrice(priceDiff)}</li>
+                <li><strong>무료배송:</strong> ${freeShippingCount}개 / ${products.length}개</li>
+            `;
+        }
+
+        // Initialize
+        renderResults();
     </script>
 </body>
 </html>
