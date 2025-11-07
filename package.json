@@ -1,0 +1,25 @@
+{
+  "name": "find-item2",
+  "version": "1.0.0",
+  "description": "가격 비교 검색 서비스 - 주요 쇼핑몰 최저가 비교",
+  "main": "index.html",
+  "scripts": {
+    "deploy": "gh-pages -d ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jiappa4/find-item2.git"
+  },
+  "keywords": [
+    "price-comparison",
+    "shopping",
+    "e-commerce",
+    "korea"
+  ],
+  "author": "jiappa4",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jiappa4/find-item2/issues"
+  },
+  "homepage": "https://jiappa4.github.io/find-item2/"
+}

@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>가격 비교 검색 - 최저가 찾기</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.95;
+        }
+
+        .search-card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 15px 20px;
+            font-size: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-btn {
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .search-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+            font-size: 18px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results-card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .results-header {
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .results-header h2 {
+            color: #333;
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+
+        .summary {
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .summary-item {
+            text-align: center;
+        }
+
+        .summary-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .summary-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        th:first-child {
+            border-top-left-radius: 10px;
+        }
+
+        th:last-child {
+            border-top-right-radius: 10px;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        tr:hover {
+            background: #f9f9f9;
+        }
+
+        .rank-badge {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            border-radius: 50%;
+            font-weight: 700;
+            color: white;
+        }
+
+        .rank-1 { background: linear-gradient(135deg, #FFD700, #FFA500); }
+        .rank-2 { background: linear-gradient(135deg, #C0C0C0, #A9A9A9); }
+        .rank-3 { background: linear-gradient(135deg, #CD7F32, #8B4513); }
+        .rank-other { background: linear-gradient(135deg, #667eea, #764ba2); }
+
+        .shop-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            background: #f0f0f0;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .price {
+            font-weight: 700;
+            color: #333;
+        }
+
+        .original-price {
+            text-decoration: line-through;
+            color: #999;
+            font-size: 0.9rem;
+            margin-right: 8px;
+        }
+
+        .discount-price {
+            color: #e91e63;
+            font-size: 1.1rem;
+        }
+
+        .final-price {
+            color: #667eea;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .shipping {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .shipping-free {
+            background: #4caf50;
+            color: white;
+        }
+
+        .shipping-paid {
+            background: #ff9800;
+            color: white;
+        }
+
+        .link-btn {
+            display: inline-block;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+
+        .link-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .no-results-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .search-box {
+                flex-direction: column;
+            }
+
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 0.85rem;
+            }
+
+            th, td {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function App() {
+            const [searchQuery, setSearchQuery] = useState('신일 팬히터 1200');
+            const [loading, setLoading] = useState(false);
+            const [results, setResults] = useState([]);
+
+            const formatPrice = (price) => {
+                if (typeof price === 'number') {
+                    return price.toLocaleString('ko-KR') + '원';
+                }
+                return price;
+            };
+
+            const searchProducts = async () => {
+                if (!searchQuery.trim()) {
+                    alert('검색어를 입력해주세요.');
+                    return;
+                }
+
+                setLoading(true);
+                
+                try {
+                    // 실제 API 호출 시뮬레이션 (실제로는 백엔드 API가 필요합니다)
+                    // 데모 데이터로 대체
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    const demoData = [
+                        {
+                            shop: '네이버쇼핑',
+                            name: '신일 팬히터 SPH-1200 화이트',
+                            option: '단일',
+                            originalPrice: 49900,
+                            discountPrice: 38900,
+                            shipping: 0,
+                            finalPrice: 38900,
+                            link: 'https://shopping.naver.com'
+                        },
+                        {
+                            shop: '쿠팡',
+                            name: '신일 팬히터 1200W',
+                            option: '단일',
+                            originalPrice: 45900,
+                            discountPrice: 39900,
+                            shipping: 3000,
+                            finalPrice: 42900,
+                            link: 'https://www.coupang.com'
+                        },
+                        {
+                            shop: '11번가',
+                            name: '신일 팬히터 SPH-1200',
+                            option: '화이트',
+                            originalPrice: 52000,
+                            discountPrice: 41000,
+                            shipping: 2500,
+                            finalPrice: 43500,
+                            link: 'https://www.11st.co.kr'
+                        },
+                        {
+                            shop: 'G마켓',
+                            name: '신일전자 팬히터 1200W',
+                            option: '단일',
+                            originalPrice: 48900,
+                            discountPrice: 40900,
+                            shipping: 0,
+                            finalPrice: 40900,
+                            link: 'https://www.gmarket.co.kr'
+                        },
+                        {
+                            shop: '옥션',
+                            name: '신일 팬히터 SPH-1200',
+                            option: '단일',
+                            originalPrice: 47900,
+                            discountPrice: 39900,
+                            shipping: 2000,
+                            finalPrice: 41900,
+                            link: 'https://www.auction.co.kr'
+                        }
+                    ];
+
+                    const sortedData = demoData.sort((a, b) => a.finalPrice - b.finalPrice);
+                    setResults(sortedData);
+                } catch (error) {
+                    console.error('검색 중 오류:', error);
+                    alert('검색 중 오류가 발생했습니다.');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleKeyPress = (e) => {
+                if (e.key === 'Enter') {
+                    searchProducts();
+                }
+            };
+
+            const getRankBadgeClass = (index) => {
+                if (index === 0) return 'rank-badge rank-1';
+                if (index === 1) return 'rank-badge rank-2';
+                if (index === 2) return 'rank-badge rank-3';
+                return 'rank-badge rank-other';
+            };
+
+            const calculateSummary = () => {
+                if (results.length === 0) return null;
+
+                const avgPrice = Math.round(
+                    results.reduce((sum, item) => sum + item.finalPrice, 0) / results.length
+                );
+                const lowestPrice = results[0].finalPrice;
+                const freeShippingCount = results.filter(item => item.shipping === 0).length;
+
+                return {
+                    totalResults: results.length,
+                    avgPrice,
+                    lowestPrice,
+                    freeShippingRate: Math.round((freeShippingCount / results.length) * 100)
+                };
+            };
+
+            const summary = calculateSummary();
+
+            return (
+                <div className="container">
+                    <div className="header">
+                        <h1>🔍 가격 비교 검색</h1>
+                        <p>주요 쇼핑몰의 최저가를 한눈에 비교하세요</p>
+                    </div>
+
+                    <div className="search-card">
+                        <div className="search-box">
+                            <input
+                                type="text"
+                                className="search-input"
+                                placeholder="검색할 상품명을 입력하세요 (예: 신일 팬히터 1200)"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onKeyPress={handleKeyPress}
+                            />
+                            <button 
+                                className="search-btn" 
+                                onClick={searchProducts}
+                                disabled={loading}
+                            >
+                                {loading ? '검색 중...' : '검색하기'}
+                            </button>
+                        </div>
+                        <p style={{color: '#666', fontSize: '0.9rem'}}>
+                            💡 <strong>주요 검색 쇼핑몰:</strong> 네이버쇼핑, 쿠팡, 11번가, G마켓, 옥션, 인터파크, SSG 등
+                        </p>
+                    </div>
+
+                    {loading && (
+                        <div className="search-card">
+                            <div className="loading">
+                                <div className="spinner"></div>
+                                <p>주요 쇼핑몰에서 "{searchQuery}" 검색 중...</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {!loading && results.length > 0 && (
+                        <div className="results-card">
+                            <div className="results-header">
+                                <h2>검색 결과: {searchQuery}</h2>
+                                <p style={{color: '#666', marginTop: '5px'}}>
+                                    총 {results.length}개 상품 발견 • 최저실현가 기준 정렬
+                                </p>
+                            </div>
+
+                            {summary && (
+                                <div className="summary">
+                                    <div className="summary-grid">
+                                        <div className="summary-item">
+                                            <div className="summary-label">최저실현가</div>
+                                            <div className="summary-value">{formatPrice(summary.lowestPrice)}</div>
+                                        </div>
+                                        <div className="summary-item">
+                                            <div className="summary-label">평균 가격</div>
+                                            <div className="summary-value">{formatPrice(summary.avgPrice)}</div>
+                                        </div>
+                                        <div className="summary-item">
+                                            <div className="summary-label">검색 결과</div>
+                                            <div className="summary-value">{summary.totalResults}개</div>
+                                        </div>
+                                        <div className="summary-item">
+                                            <div className="summary-label">무료배송 비중</div>
+                                            <div className="summary-value">{summary.freeShippingRate}%</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>순위</th>
+                                            <th>쇼핑몰</th>
+                                            <th>상품명</th>
+                                            <th>옵션</th>
+                                            <th>정가</th>
+                                            <th>할인가</th>
+                                            <th>배송비</th>
+                                            <th>최저실현가</th>
+                                            <th>링크</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {results.map((item, index) => (
+                                            <tr key={index}>
+                                                <td>
+                                                    <span className={getRankBadgeClass(index)}>
+                                                        {index + 1}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span className="shop-badge">{item.shop}</span>
+                                                </td>
+                                                <td style={{minWidth: '200px'}}>{item.name}</td>
+                                                <td>{item.option}</td>
+                                                <td>
+                                                    <span className="original-price">
+                                                        {formatPrice(item.originalPrice)}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span className="discount-price">
+                                                        {formatPrice(item.discountPrice)}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span className={item.shipping === 0 ? 'shipping shipping-free' : 'shipping shipping-paid'}>
+                                                        {item.shipping === 0 ? '무료' : formatPrice(item.shipping)}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span className="final-price">
+                                                        {formatPrice(item.finalPrice)}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <a href={item.link} target="_blank" rel="noopener noreferrer" className="link-btn">
+                                                        바로가기
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div style={{marginTop: '25px', padding: '15px', background: '#f9f9f9', borderRadius: '10px'}}>
+                                <h3 style={{marginBottom: '10px', color: '#333'}}>📊 분석 요약</h3>
+                                <ul style={{lineHeight: '1.8', color: '#666'}}>
+                                    <li><strong>최저실현가:</strong> {results[0].shop}에서 {formatPrice(results[0].finalPrice)}</li>
+                                    <li><strong>가격 범위:</strong> {formatPrice(results[0].finalPrice)} ~ {formatPrice(results[results.length-1].finalPrice)}</li>
+                                    <li><strong>무료배송 비중:</strong> {summary.freeShippingRate}% ({results.filter(r => r.shipping === 0).length}/{results.length}개)</li>
+                                    <li><strong>평균 할인율:</strong> {Math.round(results.reduce((sum, item) => 
+                                        sum + ((item.originalPrice - item.discountPrice) / item.originalPrice * 100), 0) / results.length)}%</li>
+                                </ul>
+                            </div>
+                        </div>
+                    )}
+
+                    {!loading && results.length === 0 && searchQuery && (
+                        <div className="results-card">
+                            <div className="no-results">
+                                <div className="no-results-icon">🔍</div>
+                                <h3>검색 결과가 없습니다</h3>
+                                <p style={{marginTop: '10px'}}>다른 검색어로 시도해보세요</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
