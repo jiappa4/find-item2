@@ -1,21 +1,25 @@
 @echo off
-chcp 65001 >nul
+cd /d "%~dp0"
+
 echo ================================
-echo Flask API 서버 실행
+echo Flask API Server
 echo ================================
 echo.
 
-cd /d "%~dp0"
-
 if not exist venv (
-    echo ❌ 가상환경이 없습니다. setup.bat를 먼저 실행하세요.
+    echo Virtual environment not found. Run setup.bat first.
     pause
     exit /b 1
 )
 
 call venv\Scripts\activate.bat
 
-echo 🚀 API 서버 시작...
-echo 📍 http://localhost:5000
+echo Starting API server...
+echo Server will run at: http://localhost:5000
 echo.
+echo Press Ctrl+C to stop the server
+echo.
+
 python api_server.py
+
+pause

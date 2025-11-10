@@ -1,30 +1,23 @@
 @echo off
-chcp 65001 >nul
+cd /d "%~dp0"
+
 echo ================================
-echo 가격 수집 배치 실행
+echo Price Scraper (Batch)
 echo ================================
 echo.
 
-cd /d "%~dp0"
-
 if not exist venv (
-    echo ❌ 가상환경이 없습니다. setup.bat를 먼저 실행하세요.
+    echo Virtual environment not found. Run setup.bat first.
     pause
     exit /b 1
 )
 
 call venv\Scripts\activate.bat
 
-echo 🔍 웹 스크래핑 시작...
+echo Running scraper...
 python scraper.py
 
-if %errorlevel% equ 0 (
-    echo.
-    echo ✅ 데이터 수집 완료!
-) else (
-    echo.
-    echo ❌ 스크래핑 실패
-)
-
+echo.
+echo Scraping completed!
 echo.
 pause
