@@ -9,7 +9,15 @@ import re
 from difflib import SequenceMatcher
 
 app = Flask(__name__)
-CORS(app)  # CORS 허용
+
+# CORS 설정 강화
+CORS(app, resources={
+    r"/api/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+})
 
 DB_PATH = 'prices.db'
 
@@ -117,9 +125,12 @@ def advanced_search(query):
     
     return scored_products
 
-@app.route('/api/search', methods=['GET'])
+@app.route('/api/search', methods=['GET', 'OPTIONS'])
 def search_products():
     """상품 검색 API - 고급 검색 로직 적용"""
+    if request.method == 'OPTIONS':
+        return '', 204
+        
     query = request.args.get('q', '')
     
     if not query:
@@ -226,8 +237,35 @@ def health_check():
         'timestamp': datetime.now().isoformat()
     })
 
+@app.route('/')
+def index():
+    """루트 경로"""
+    return jsonify({
+        'message': 'Price Comparison API',
+        'version': '3.1',
+        'endpoints': {
+            'search': '/api/search?q=query',
+            'products': '/api/products',
+            'stats': '/api/stats',
+            'health': '/api/health'
+        }
+    })
+
 if __name__ == '__main__':
-    print("🚀 Flask API Server Starting...")
-    print("📍 http://localhost:5000")
     print("=" * 50)
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    print("Flask API Server Starting...")
+    print("=" * 50)
+    print("Server: http://localhost:5000")
+    print("Server: http://127.0.0.1:5000")
+    print("Server: http://0.0.0.0:5000")
+    print("=" * 50)
+    print("Endpoints:")
+    print("  GET  /api/health")
+    print("  GET  /api/search?q=query")
+    print("  GET  /api/products")
+    print("  GET  /api/stats")
+    print("=" * 50)
+    print("Press Ctrl+C to stop")
+    print("=" * 50)
+    
+    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)

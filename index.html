@@ -66,6 +66,12 @@
                     <span id="statusText" class="font-semibold"></span>
                 </div>
             </div>
+
+            <!-- Debug Info -->
+            <div id="debugInfo" class="hidden mt-4 p-3 bg-gray-100 rounded-lg text-xs">
+                <div class="font-bold mb-2">Debug Info:</div>
+                <div id="debugContent"></div>
+            </div>
         </div>
 
         <!-- Loading -->
@@ -143,6 +149,7 @@
     <script>
         const API_BASE_URL = 'http://localhost:5000/api';
         let currentProducts = [];
+        let debugMode = true; // Enable debug mode
 
         function formatPrice(price) {
             if (!price) return '0원';
@@ -153,6 +160,16 @@
             const colors = ['#FFD700', '#C0C0C0', '#CD7F32', '#667eea'];
             const color = colors[Math.min(index, 3)];
             return `<div class="flex items-center justify-center w-8 h-8 rounded-full text-white font-bold" style="background: ${color}">${index + 1}</div>`;
+        }
+
+        function showDebug(message) {
+            if (debugMode) {
+                const debugDiv = document.getElementById('debugInfo');
+                const debugContent = document.getElementById('debugContent');
+                debugDiv.classList.remove('hidden');
+                debugContent.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
+                console.log('[DEBUG]', message);
+            }
         }
 
         function showApiStatus(type, message) {
@@ -188,6 +205,8 @@
                 return;
             }
 
+            showDebug(`Starting search for: ${query}`);
+
             // UI 초기화
             document.getElementById('loading').classList.remove('hidden');
             document.getElementById('emptyState').classList.add('hidden');
@@ -197,26 +216,44 @@
             document.getElementById('searchBtn').disabled = true;
 
             try {
-                const response = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(query)}`);
+                const url = `${API_BASE_URL}/search?q=${encodeURIComponent(query)}`;
+                showDebug(`Fetching URL: ${url}`);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    mode: 'cors'
+                });
+                
+                showDebug(`Response status: ${response.status} ${response.statusText}`);
                 
                 if (!response.ok) {
-                    throw new Error('API 호출 실패');
+                    const errorText = await response.text();
+                    showDebug(`Error response: ${errorText}`);
+                    throw new Error(`API Error: ${response.status}`);
                 }
 
                 const data = await response.json();
+                showDebug(`Data received: ${JSON.stringify(data).substring(0, 100)}...`);
+                
                 currentProducts = data.products || [];
 
                 if (currentProducts.length === 0) {
                     showApiStatus('warning', '검색 결과가 없습니다. 배치를 실행하여 데이터를 수집해주세요.');
+                    showDebug('No products found');
                     document.getElementById('emptyState').classList.remove('hidden');
                 } else {
                     showApiStatus('success', `${currentProducts.length}개의 상품을 찾았습니다!`);
+                    showDebug(`Rendering ${currentProducts.length} products`);
                     renderResults(data);
                 }
 
             } catch (error) {
                 console.error('Error:', error);
-                showApiStatus('error', 'API 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인하세요.');
+                showDebug(`Error caught: ${error.message}`);
+                showApiStatus('error', `API 서버 오류: ${error.message}`);
                 document.getElementById('emptyState').classList.remove('hidden');
             } finally {
                 document.getElementById('loading').classList.add('hidden');
@@ -296,20 +333,26 @@
 
         // 페이지 로드 시 API 상태 체크
         async function checkApiStatus() {
+            showDebug('Checking API status...');
             try {
                 const response = await fetch(`${API_BASE_URL}/health`);
+                showDebug(`Health check status: ${response.status}`);
                 if (response.ok) {
+                    const data = await response.json();
                     showApiStatus('success', 'API 서버 연결 완료');
+                    showDebug(`API healthy: ${JSON.stringify(data)}`);
                 } else {
                     throw new Error('API not responding');
                 }
             } catch (error) {
+                showDebug(`Health check failed: ${error.message}`);
                 showApiStatus('error', 'API 서버가 실행되지 않았습니다. backend/run_api.bat을 실행하세요.');
             }
         }
 
         // 초기화
         window.addEventListener('load', () => {
+            showDebug('Page loaded');
             checkApiStatus();
         });
     </script>
