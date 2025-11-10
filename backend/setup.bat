@@ -1,46 +1,28 @@
 @echo off
-echo ====================================
-echo Price Scraper Batch Setup
-echo ====================================
+chcp 65001 >nul
+echo ================================
+echo 백엔드 환경 설정
+echo ================================
 echo.
 
 cd /d "%~dp0"
 
-echo [1/4] Checking Python installation...
-python --version
-if %errorlevel% neq 0 (
-    echo Error: Python is not installed
-    echo Please install Python from https://www.python.org/
-    pause
-    exit /b 1
-)
-echo.
+echo 1. 가상환경 생성 중...
+python -m venv venv
 
-echo [2/4] Creating virtual environment...
-if not exist venv (
-    python -m venv venv
-    echo Virtual environment created
-) else (
-    echo Virtual environment already exists
-)
-echo.
-
-echo [3/4] Activating virtual environment...
+echo 2. 가상환경 활성화...
 call venv\Scripts\activate.bat
-echo.
 
-echo [4/4] Installing dependencies...
+echo 3. 패키지 설치 중...
+python -m pip install --upgrade pip
 pip install -r requirements.txt
-echo.
 
-echo ====================================
-echo Setup Complete!
-echo ====================================
 echo.
-echo To run the scraper:
-echo   1. run_scraper.bat
+echo ✅ 설정 완료!
 echo.
-echo To start API server:
-echo   2. run_api.bat
+echo 다음 단계:
+echo 1. run_migration.bat (최초 1회)
+echo 2. run_scraper.bat (데이터 수집)
+echo 3. run_api.bat (서버 실행)
 echo.
 pause

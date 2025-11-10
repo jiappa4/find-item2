@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 echo ================================
-echo 가격 수집 배치 실행
+echo DB 마이그레이션 실행
 echo ================================
 echo.
 
@@ -15,15 +15,17 @@ if not exist venv (
 
 call venv\Scripts\activate.bat
 
-echo 🔍 웹 스크래핑 시작...
-python scraper.py
+echo 🔧 DB 스키마 마이그레이션 중...
+python migrate_db.py
 
 if %errorlevel% equ 0 (
     echo.
-    echo ✅ 데이터 수집 완료!
+    echo ✅ 마이그레이션 완료!
+    echo.
+    echo 이제 run_scraper.bat를 실행하여 데이터를 수집하세요.
 ) else (
     echo.
-    echo ❌ 스크래핑 실패
+    echo ❌ 마이그레이션 실패
 )
 
 echo.
