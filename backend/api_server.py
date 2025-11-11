@@ -57,8 +57,8 @@ def calculate_similarity(query_tokens, product_name, product_model, product_bran
     total_score = token_score + model_score + brand_score
     return total_score
 
-def advanced_search(query):
-    """고급 검색 로직 - 70점 이상만 필터링"""
+def advanced_search(query, min_score=70):
+    """고급 검색 로직 - 지정된 점수 이상만 필터링"""
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -85,8 +85,8 @@ def advanced_search(query):
             row['brand']
         )
         
-        # 70점 이상만 포함 (50 -> 70으로 변경)
-        if score >= 70:
+        # 지정된 점수 이상만 포함
+        if score >= min_score:
             scored_products.append({
                 'shop': row['shop'],
                 'name': row['name'],
@@ -113,23 +113,33 @@ def search_products():
         return '', 204
         
     query = request.args.get('q', '')
+    min_score = float(request.args.get('minScore', 70))  # 기본값 70점
     
     if not query:
         return jsonify({'error': 'Query parameter required'}), 400
     
-    products = advanced_search(query)
+    products = advanced_search(query, min_score)
     
     if products:
         avg_price = sum(p['finalPrice'] for p in products) / len(products)
         free_shipping_count = sum(1 for p in products if p['shipping'] == 0)
         avg_relevance = sum(p['relevanceScore'] for p in products) / len(products)
         
+        # 쇼핑몰별 통계
+        shop_stats = {}
+        for p in products:
+            shop = p['shop']
+            if shop not in shop_stats:
+                shop_stats[shop] = 0
+            shop_stats[shop] += 1
+        
         summary = {
             'totalCount': len(products),
             'lowestPrice': products[0]['finalPrice'] if products else 0,
             'avgPrice': int(avg_price),
             'freeShippingRate': int((free_shipping_count / len(products)) * 100),
-            'avgRelevance': round(avg_relevance, 1)
+            'avgRelevance': round(avg_relevance, 1),
+            'shopStats': shop_stats
         }
     else:
         summary = None
