@@ -56,7 +56,7 @@
             
             <div class="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
                 <span>💡</span>
-                <p><strong>AI 검색:</strong> 정확도 기반 필터링으로 관련 없는 상품 자동 제외 (50점 이상만 표시)</p>
+                <p><strong>AI 검색:</strong> 정확도 기반 필터링으로 관련 없는 상품 자동 제외 (70점 이상만 표시)</p>
             </div>
 
             <!-- API 상태 -->
@@ -332,7 +332,7 @@
                 <li><strong>가격 범위:</strong> ${formatPrice(products[0].finalPrice)} ~ ${formatPrice(products[products.length - 1].finalPrice)}</li>
                 <li><strong>가격 차이:</strong> ${formatPrice(priceDiff)} (${((priceDiff/products[0].finalPrice)*100).toFixed(1)}%)</li>
                 <li><strong>무료배송:</strong> ${freeShippingCount}개 / ${products.length}개 (${summary.freeShippingRate}%)</li>
-                <li><strong>평균 정확도:</strong> ${avgRelevance.toFixed(1)}점 (50점 이상만 표시)</li>
+                <li><strong>평균 정확도:</strong> ${avgRelevance.toFixed(1)}점 (70점 이상만 표시)</li>
             `;
 
             document.getElementById('resultsTable').classList.remove('hidden');

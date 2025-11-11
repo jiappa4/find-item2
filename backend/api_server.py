@@ -58,7 +58,7 @@ def calculate_similarity(query_tokens, product_name, product_model, product_bran
     return total_score
 
 def advanced_search(query):
-    """고급 검색 로직"""
+    """고급 검색 로직 - 70점 이상만 필터링"""
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -85,7 +85,8 @@ def advanced_search(query):
             row['brand']
         )
         
-        if score >= 50:
+        # 70점 이상만 포함 (50 -> 70으로 변경)
+        if score >= 70:
             scored_products.append({
                 'shop': row['shop'],
                 'name': row['name'],
@@ -217,6 +218,7 @@ def index():
     return jsonify({
         'message': 'Price Comparison API',
         'version': '3.1',
+        'relevanceThreshold': 70,
         'endpoints': {
             'search': '/api/search?q=query',
             'products': '/api/products',
@@ -233,6 +235,7 @@ if __name__ == '__main__':
     print("Server: http://127.0.0.1:5000")
     print("=" * 50)
     print("CORS: Enabled for all origins")
+    print("Relevance Threshold: 70+ points")
     print("=" * 50)
     print("Endpoints:")
     print("  GET  /api/health")
@@ -243,5 +246,4 @@ if __name__ == '__main__':
     print("Press Ctrl+C to stop")
     print("=" * 50)
     
-    # threaded=False로 변경하여 단순화
     app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
