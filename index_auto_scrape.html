@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>가격 비교 검색 - 자동 스크래핑</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes progress {
+            0% { width: 0%; }
+        }
+        .progress-bar {
+            transition: width 0.3s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-purple-500 to-purple-700 min-h-screen p-6">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="text-center text-white mb-8">
+            <h1 class="text-4xl font-bold mb-2">🔍 가격 비교 검색</h1>
+            <p class="text-lg opacity-90">실시간 최저가 자동 수집 시스템 (자동 스크래핑)</p>
+        </div>
+
+        <!-- Search Card -->
+        <div class="bg-white rounded-2xl shadow-xl p-8 mb-6">
+            <div class="flex gap-4 mb-4 flex-wrap">
+                <input
+                    type="text"
+                    id="searchQuery"
+                    class="flex-1 min-w-[300px] px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none text-lg"
+                    placeholder="검색할 상품명 입력 (예: 신일 팬히터 1200)"
+                    value="신일 팬히터 1200"
+                    onkeypress="if(event.key==='Enter') searchProducts()"
+                />
+                <button
+                    onclick="searchProducts()"
+                    id="searchBtn"
+                    class="px-8 py-3 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-lg font-semibold hover:shadow-lg transition"
+                >
+                    🔍 검색
+                </button>
+            </div>
+            
+            <div class="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                <span>💡</span>
+                <p><strong>자동 스크래핑:</strong> 검색 결과가 없으면 자동으로 8개 쇼핑몰을 스크래핑합니다</p>
+            </div>
+
+            <!-- API 상태 -->
+            <div id="apiStatus" class="hidden mt-4 p-3 rounded-lg">
+                <div class="flex items-center gap-2">
+                    <span id="statusIcon">⚠️</span>
+                    <span id="statusText" class="font-semibold"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scraping Progress -->
+        <div id="scrapingProgress" class="hidden bg-white rounded-2xl shadow-xl p-8 mb-6">
+            <div class="text-center mb-6">
+                <div class="spinner mx-auto mb-4"></div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-2">스크래핑 중...</h3>
+                <p id="scrapingMessage" class="text-gray-600 text-lg mb-4">준비 중...</p>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="mb-4">
+                <div class="flex justify-between text-sm text-gray-600 mb-2">
+                    <span id="currentSite">대기 중...</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                    <div id="progressBar" class="progress-bar bg-gradient-to-r from-purple-500 to-purple-700 h-full rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Sites Grid -->
+            <div class="grid grid-cols-4 gap-3 mt-6">
+                <div id="site-naver" class="site-status p-3 bg-gray-100 rounded-lg text-center text-sm">
+                    <div class="font-semibold">네이버쇼핑</div>
+                    <div class="text-xs text-gray-500">대기 중</div>
+                </div>
+                <div id="site-coupang" class="site-status p-3 bg-gray-100 rounded-lg text-center text-sm">
+                    <div class="font-semibold">쿠팡</div>
+                    <div class="text-xs text-gray-500">대기 중</div>
+                </div>
+                <div id="site-gmarket" class="site-status p-3 bg-gray-100 rounded-lg text-center text-sm">
+                    <div class="font-semibold">G마켓</div>
+                    <div class="text-xs text-gray-500">대기 중</div>
+                </div>
+                <div id="site-11st" class="site-status p-3 bg-gray-100 rounded-lg text-center text-sm">
+                    <div class="font-semibold">11번가</div>
+                    <div class="text-xs text-gray-500">대기 중</div>
+                </div>
+                <div id="site-auction" class="site-status p-3 bg-gray-100 rounded-lg text-center text-sm">
+                    <div class="font-semibold">옥션</div>
+                    <div class="text-xs text-gray-500">대기 중</div>
+                </div>
+                <div id="site-ssg" class="site-status p-3 bg-gray-100 rounded-lg text-center text-sm">
+                    <div class="font-semibold">SSG</div>
+                    <div class="text-xs text-gray-500">대기 중</div>
+                </div>
+                <div id="site-lotte" class="site-status p-3 bg-gray-100 rounded-lg text-center text-sm">
+                    <div class="font-semibold">롯데온</div>
+                    <div class="text-xs text-gray-500">대기 중</div>
+                </div>
+                <div id="site-interpark" class="site-status p-3 bg-gray-100 rounded-lg text-center text-sm">
+                    <div class="font-semibold">인터파크</div>
+                    <div class="text-xs text-gray-500">대기 중</div>
+                </div>
+            </div>
+
+            <div class="mt-6 text-center text-sm text-gray-500">
+                <p>⏱️ 예상 소요 시간: 약 2-3분</p>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="hidden bg-white rounded-2xl shadow-xl p-16 text-center mb-6">
+            <div class="spinner mx-auto mb-4"></div>
+            <p class="text-gray-600 text-lg">검색 중...</p>
+        </div>
+
+        <!-- Summary -->
+        <div id="summary" class="hidden bg-white rounded-2xl shadow-xl p-6 mb-6 fade-in">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div class="text-center">
+                    <div class="text-sm text-gray-600 mb-1">최저실현가</div>
+                    <div id="lowestPrice" class="text-2xl font-bold text-purple-600">-</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-sm text-gray-600 mb-1">평균 가격</div>
+                    <div id="avgPrice" class="text-2xl font-bold text-purple-600">-</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-sm text-gray-600 mb-1">검색 결과</div>
+                    <div id="totalCount" class="text-2xl font-bold text-purple-600">0개</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-sm text-gray-600 mb-1">무료배송</div>
+                    <div id="freeShipping" class="text-2xl font-bold text-purple-600">0%</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-sm text-gray-600 mb-1">평균 정확도</div>
+                    <div id="avgRelevance" class="text-2xl font-bold text-green-600">-</div>
+                </div>
+            </div>
+            <div class="mt-4 text-center text-sm text-gray-500">
+                <span id="updateTime">마지막 업데이트: -</span>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div id="resultsContainer" class="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div id="emptyState" class="p-16 text-center">
+                <div class="text-6xl mb-4">🔍</div>
+                <h3 class="text-2xl font-bold text-gray-700 mb-2">상품을 검색해주세요</h3>
+                <p class="text-gray-500">
+                    검색어를 입력하고 검색 버튼을 클릭하세요<br/>
+                    결과가 없으면 자동으로 8개 쇼핑몰을 스크래핑합니다
+                </p>
+            </div>
+
+            <div id="resultsTable" class="hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gradient-to-r from-purple-500 to-purple-700 text-white">
+                            <tr>
+                                <th class="px-4 py-3 text-left">순위</th>
+                                <th class="px-4 py-3 text-left">정확도</th>
+                                <th class="px-4 py-3 text-left">쇼핑몰</th>
+                                <th class="px-4 py-3 text-left">상품명</th>
+                                <th class="px-4 py-3 text-left">옵션</th>
+                                <th class="px-4 py-3 text-left">정가</th>
+                                <th class="px-4 py-3 text-left">할인가</th>
+                                <th class="px-4 py-3 text-left">배송비</th>
+                                <th class="px-4 py-3 text-left">최저실현가</th>
+                                <th class="px-4 py-3 text-left">링크</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="p-6 bg-gray-50">
+                    <h3 class="text-lg font-bold mb-3">📊 분석 요약</h3>
+                    <ul id="analysisText" class="space-y-2 text-gray-700">
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:5000/api';
+        let currentProducts = [];
+        let scrapingInterval = null;
+
+        const siteMapping = {
+            '네이버쇼핑': 'naver',
+            '쿠팡': 'coupang',
+            'G마켓': 'gmarket',
+            '11번가': '11st',
+            '옥션': 'auction',
+            'SSG닷컴': 'ssg',
+            '롯데온': 'lotte',
+            '인터파크': 'interpark'
+        };
+
+        function formatPrice(price) {
+            if (!price) return '0원';
+            return parseInt(price).toLocaleString('ko-KR') + '원';
+        }
+
+        function getRankBadge(index) {
+            const colors = ['#FFD700', '#C0C0C0', '#CD7F32', '#667eea'];
+            const color = colors[Math.min(index, 3)];
+            return `<div class="flex items-center justify-center w-8 h-8 rounded-full text-white font-bold" style="background: ${color}">${index + 1}</div>`;
+        }
+
+        function getRelevanceBadge(score) {
+            let color, text;
+            if (score >= 90) {
+                color = 'bg-green-500';
+                text = '완벽';
+            } else if (score >= 80) {
+                color = 'bg-green-400';
+                text = '매우높음';
+            } else if (score >= 70) {
+                color = 'bg-blue-500';
+                text = '높음';
+            } else if (score >= 60) {
+                color = 'bg-yellow-500';
+                text = '보통';
+            } else {
+                color = 'bg-orange-500';
+                text = '낮음';
+            }
+            
+            return `
+                <div class="flex flex-col items-center">
+                    <span class="px-3 py-1 ${color} text-white rounded-full text-sm font-semibold">
+                        ${score.toFixed(1)}점
+                    </span>
+                    <span class="text-xs text-gray-500">${text}</span>
+                </div>
+            `;
+        }
+
+        function showApiStatus(type, message) {
+            const statusDiv = document.getElementById('apiStatus');
+            const statusIcon = document.getElementById('statusIcon');
+            const statusText = document.getElementById('statusText');
+            
+            statusDiv.classList.remove('hidden', 'bg-red-50', 'bg-green-50', 'bg-yellow-50');
+            
+            if (type === 'error') {
+                statusDiv.classList.add('bg-red-50');
+                statusIcon.textContent = '❌';
+                statusText.textContent = message;
+                statusText.className = 'font-semibold text-red-700';
+            } else if (type === 'success') {
+                statusDiv.classList.add('bg-green-50');
+                statusIcon.textContent = '✅';
+                statusText.textContent = message;
+                statusText.className = 'font-semibold text-green-700';
+            } else {
+                statusDiv.classList.add('bg-yellow-50');
+                statusIcon.textContent = '⚠️';
+                statusText.textContent = message;
+                statusText.className = 'font-semibold text-yellow-700';
+            }
+        }
+
+        function updateSiteStatus(siteName, status, message) {
+            const siteKey = siteMapping[siteName] || siteName.toLowerCase();
+            const siteEl = document.getElementById(`site-${siteKey}`);
+            
+            if (!siteEl) return;
+            
+            siteEl.classList.remove('bg-gray-100', 'bg-blue-100', 'bg-green-100');
+            
+            if (status === 'working') {
+                siteEl.classList.add('bg-blue-100');
+                siteEl.innerHTML = `
+                    <div class="font-semibold">${siteName}</div>
+                    <div class="text-xs text-blue-600">수집 중...</div>
+                `;
+            } else if (status === 'done') {
+                siteEl.classList.add('bg-green-100');
+                siteEl.innerHTML = `
+                    <div class="font-semibold">${siteName}</div>
+                    <div class="text-xs text-green-600">✓ 완료</div>
+                `;
+            }
+        }
+
+        async function pollScrapingStatus() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/scraping/status`);
+                const status = await response.json();
+                
+                if (!status.is_scraping) {
+                    clearInterval(scrapingInterval);
+                    
+                    // 스크래핑 완료 후 자동으로 재검색
+                    setTimeout(() => {
+                        document.getElementById('scrapingProgress').classList.add('hidden');
+                        searchProducts();
+                    }, 1000);
+                    
+                    return;
+                }
+                
+                // UI 업데이트
+                document.getElementById('progressBar').style.width = status.progress + '%';
+                document.getElementById('progressPercent').textContent = status.progress + '%';
+                document.getElementById('scrapingMessage').textContent = status.message;
+                document.getElementById('currentSite').textContent = status.current_site || '준비 중...';
+                
+                // 사이트 상태 업데이트
+                if (status.current_site) {
+                    updateSiteStatus(status.current_site, 'working');
+                }
+                
+            } catch (error) {
+                console.error('Status polling error:', error);
+            }
+        }
+
+        async function startScraping(query) {
+            try {
+                // 스크래핑 UI 표시
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('scrapingProgress').classList.remove('hidden');
+                
+                // 스크래핑 시작
+                const response = await fetch(`${API_BASE_URL}/scrape`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ query: query })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('스크래핑 시작 실패');
+                }
+                
+                // 진행상황 폴링 시작
+                scrapingInterval = setInterval(pollScrapingStatus, 1000);
+                
+            } catch (error) {
+                console.error('Scraping error:', error);
+                showApiStatus('error', '스크래핑 시작 실패: ' + error.message);
+                document.getElementById('scrapingProgress').classList.add('hidden');
+                document.getElementById('emptyState').classList.remove('hidden');
+            }
+        }
+
+        async function searchProducts() {
+            const query = document.getElementById('searchQuery').value.trim();
+            
+            if (!query) {
+                alert('검색어를 입력해주세요!');
+                return;
+            }
+
+            // UI 초기화
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('resultsTable').classList.add('hidden');
+            document.getElementById('summary').classList.add('hidden');
+            document.getElementById('apiStatus').classList.add('hidden');
+            document.getElementById('scrapingProgress').classList.add('hidden');
+            document.getElementById('searchBtn').disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(query)}`, {
+                    method: 'GET',
+                    headers: {'Content-Type': 'application/json'},
+                    mode: 'cors'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // 스크래핑 필요 여부 확인
+                if (data.needsScraping) {
+                    showApiStatus('warning', '검색 결과가 없어 자동 스크래핑을 시작합니다...');
+                    await startScraping(query);
+                    return;
+                }
+                
+                currentProducts = data.products || [];
+
+                if (currentProducts.length === 0) {
+                    showApiStatus('warning', '검색 결과가 없습니다.');
+                    document.getElementById('emptyState').classList.remove('hidden');
+                } else {
+                    showApiStatus('success', `${currentProducts.length}개의 상품을 찾았습니다!`);
+                    renderResults(data);
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                showApiStatus('error', `API 서버 오류: ${error.message}`);
+                document.getElementById('emptyState').classList.remove('hidden');
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('searchBtn').disabled = false;
+            }
+        }
+
+        function renderResults(data) {
+            const products = data.products;
+            const summary = data.summary;
+
+            // Summary 업데이트
+            if (summary) {
+                document.getElementById('lowestPrice').textContent = formatPrice(summary.lowestPrice);
+                document.getElementById('avgPrice').textContent = formatPrice(summary.avgPrice);
+                document.getElementById('totalCount').textContent = summary.totalCount + '개';
+                document.getElementById('freeShipping').textContent = summary.freeShippingRate + '%';
+                document.getElementById('avgRelevance').textContent = (summary.avgRelevance || 0).toFixed(1) + '점';
+                document.getElementById('summary').classList.remove('hidden');
+            }
+
+            // 업데이트 시간
+            const updateTime = new Date(data.updatedAt).toLocaleString('ko-KR');
+            document.getElementById('updateTime').textContent = `마지막 업데이트: ${updateTime}`;
+
+            // 테이블 렌더링
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = products.map((item, index) => `
+                <tr class="border-b hover:bg-gray-50 fade-in">
+                    <td class="px-4 py-3">${getRankBadge(index)}</td>
+                    <td class="px-4 py-3">${getRelevanceBadge(item.relevanceScore || 0)}</td>
+                    <td class="px-4 py-3">
+                        <span class="px-3 py-1 bg-gray-100 rounded-full text-sm font-semibold">
+                            ${item.shop}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 font-medium">${item.name}</td>
+                    <td class="px-4 py-3 text-sm text-gray-600">${item.option || '단일'}</td>
+                    <td class="px-4 py-3 text-gray-400 line-through text-sm">
+                        ${formatPrice(item.originalPrice)}
+                    </td>
+                    <td class="px-4 py-3 text-pink-600 font-semibold">
+                        ${formatPrice(item.discountPrice)}
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 rounded text-xs font-semibold ${
+                            item.shipping === 0 ? 'bg-green-500 text-white' : 'bg-orange-500 text-white'
+                        }">
+                            ${item.shipping === 0 ? '무료' : formatPrice(item.shipping)}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-purple-600 font-bold text-lg">
+                        ${formatPrice(item.finalPrice)}
+                    </td>
+                    <td class="px-4 py-3">
+                        ${item.link ? `
+                            <a href="${item.link}" target="_blank" rel="noopener noreferrer"
+                               class="px-3 py-1 bg-purple-500 text-white rounded text-sm hover:bg-purple-600">
+                                이동
+                            </a>
+                        ` : '<span class="text-gray-400 text-sm">-</span>'}
+                    </td>
+                </tr>
+            `).join('');
+
+            // 분석 텍스트
+            const priceDiff = products[products.length - 1].finalPrice - products[0].finalPrice;
+            const freeShippingCount = products.filter(p => p.shipping === 0).length;
+            const avgRelevance = summary.avgRelevance || 0;
+            
+            document.getElementById('analysisText').innerHTML = `
+                <li><strong>최저실현가:</strong> ${products[0].shop}에서 ${formatPrice(products[0].finalPrice)}</li>
+                <li><strong>가격 범위:</strong> ${formatPrice(products[0].finalPrice)} ~ ${formatPrice(products[products.length - 1].finalPrice)}</li>
+                <li><strong>가격 차이:</strong> ${formatPrice(priceDiff)} (${((priceDiff/products[0].finalPrice)*100).toFixed(1)}%)</li>
+                <li><strong>무료배송:</strong> ${freeShippingCount}개 / ${products.length}개 (${summary.freeShippingRate}%)</li>
+                <li><strong>평균 정확도:</strong> ${avgRelevance.toFixed(1)}점</li>
+            `;
+
+            document.getElementById('resultsTable').classList.remove('hidden');
+        }
+
+        // 페이지 로드 시 API 상태 체크
+        async function checkApiStatus() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                if (response.ok) {
+                    showApiStatus('success', 'API 서버 연결 완료 (자동 스크래핑 지원)');
+                } else {
+                    throw new Error('API not responding');
+                }
+            } catch (error) {
+                showApiStatus('error', 'API 서버가 실행되지 않았습니다. backend/run_api.bat을 실행하세요.');
+            }
+        }
+
+        // 초기화
+        window.addEventListener('load', () => {
+            checkApiStatus();
+        });
+    </script>
+</body>
+</html>
