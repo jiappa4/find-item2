@@ -27,11 +27,11 @@
     </style>
 </head>
 <body class="bg-gradient-to-br from-purple-500 to-purple-700 min-h-screen p-6">
-    <div class="max-w-6xl mx-auto">
+    <div class="max-w-7xl mx-auto">
         <!-- Header -->
         <div class="text-center text-white mb-8">
             <h1 class="text-4xl font-bold mb-2">🔍 가격 비교 검색</h1>
-            <p class="text-lg opacity-90">실시간 최저가 자동 수집 시스템</p>
+            <p class="text-lg opacity-90">실시간 최저가 자동 수집 시스템 (고급 검색 엔진)</p>
         </div>
 
         <!-- Search Card -->
@@ -56,7 +56,7 @@
             
             <div class="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
                 <span>💡</span>
-                <p><strong>자동 수집:</strong> 배치로 수집된 실시간 가격 정보를 제공합니다</p>
+                <p><strong>AI 검색:</strong> 정확도 기반 필터링으로 관련 없는 상품 자동 제외 (50점 이상만 표시)</p>
             </div>
 
             <!-- API 상태 -->
@@ -65,12 +65,6 @@
                     <span id="statusIcon">⚠️</span>
                     <span id="statusText" class="font-semibold"></span>
                 </div>
-            </div>
-
-            <!-- Debug Info -->
-            <div id="debugInfo" class="hidden mt-4 p-3 bg-gray-100 rounded-lg text-xs">
-                <div class="font-bold mb-2">Debug Info:</div>
-                <div id="debugContent"></div>
             </div>
         </div>
 
@@ -82,7 +76,7 @@
 
         <!-- Summary -->
         <div id="summary" class="hidden bg-white rounded-2xl shadow-xl p-6 mb-6 fade-in">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div class="text-center">
                     <div class="text-sm text-gray-600 mb-1">최저실현가</div>
                     <div id="lowestPrice" class="text-2xl font-bold text-purple-600">-</div>
@@ -98,6 +92,10 @@
                 <div class="text-center">
                     <div class="text-sm text-gray-600 mb-1">무료배송</div>
                     <div id="freeShipping" class="text-2xl font-bold text-purple-600">0%</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-sm text-gray-600 mb-1">평균 정확도</div>
+                    <div id="avgRelevance" class="text-2xl font-bold text-green-600">-</div>
                 </div>
             </div>
             <div class="mt-4 text-center text-sm text-gray-500">
@@ -122,6 +120,7 @@
                         <thead class="bg-gradient-to-r from-purple-500 to-purple-700 text-white">
                             <tr>
                                 <th class="px-4 py-3 text-left">순위</th>
+                                <th class="px-4 py-3 text-left">정확도</th>
                                 <th class="px-4 py-3 text-left">쇼핑몰</th>
                                 <th class="px-4 py-3 text-left">상품명</th>
                                 <th class="px-4 py-3 text-left">옵션</th>
@@ -149,7 +148,6 @@
     <script>
         const API_BASE_URL = 'http://localhost:5000/api';
         let currentProducts = [];
-        let debugMode = true; // Enable debug mode
 
         function formatPrice(price) {
             if (!price) return '0원';
@@ -162,14 +160,33 @@
             return `<div class="flex items-center justify-center w-8 h-8 rounded-full text-white font-bold" style="background: ${color}">${index + 1}</div>`;
         }
 
-        function showDebug(message) {
-            if (debugMode) {
-                const debugDiv = document.getElementById('debugInfo');
-                const debugContent = document.getElementById('debugContent');
-                debugDiv.classList.remove('hidden');
-                debugContent.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
-                console.log('[DEBUG]', message);
+        function getRelevanceBadge(score) {
+            let color, text;
+            if (score >= 90) {
+                color = 'bg-green-500';
+                text = '완벽';
+            } else if (score >= 80) {
+                color = 'bg-green-400';
+                text = '매우높음';
+            } else if (score >= 70) {
+                color = 'bg-blue-500';
+                text = '높음';
+            } else if (score >= 60) {
+                color = 'bg-yellow-500';
+                text = '보통';
+            } else {
+                color = 'bg-orange-500';
+                text = '낮음';
             }
+            
+            return `
+                <div class="flex flex-col items-center gap-1">
+                    <span class="px-3 py-1 ${color} text-white rounded-full text-sm font-bold">
+                        ${score.toFixed(1)}점
+                    </span>
+                    <span class="text-xs text-gray-500">${text}</span>
+                </div>
+            `;
         }
 
         function showApiStatus(type, message) {
@@ -205,8 +222,6 @@
                 return;
             }
 
-            showDebug(`Starting search for: ${query}`);
-
             // UI 초기화
             document.getElementById('loading').classList.remove('hidden');
             document.getElementById('emptyState').classList.add('hidden');
@@ -216,10 +231,7 @@
             document.getElementById('searchBtn').disabled = true;
 
             try {
-                const url = `${API_BASE_URL}/search?q=${encodeURIComponent(query)}`;
-                showDebug(`Fetching URL: ${url}`);
-                
-                const response = await fetch(url, {
+                const response = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(query)}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -227,32 +239,23 @@
                     mode: 'cors'
                 });
                 
-                showDebug(`Response status: ${response.status} ${response.statusText}`);
-                
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    showDebug(`Error response: ${errorText}`);
                     throw new Error(`API Error: ${response.status}`);
                 }
 
                 const data = await response.json();
-                showDebug(`Data received: ${JSON.stringify(data).substring(0, 100)}...`);
-                
                 currentProducts = data.products || [];
 
                 if (currentProducts.length === 0) {
-                    showApiStatus('warning', '검색 결과가 없습니다. 배치를 실행하여 데이터를 수집해주세요.');
-                    showDebug('No products found');
+                    showApiStatus('warning', '검색 결과가 없습니다. backend/run_scraper.bat을 실행하여 데이터를 수집해주세요.');
                     document.getElementById('emptyState').classList.remove('hidden');
                 } else {
-                    showApiStatus('success', `${currentProducts.length}개의 상품을 찾았습니다!`);
-                    showDebug(`Rendering ${currentProducts.length} products`);
+                    showApiStatus('success', `${currentProducts.length}개의 상품을 찾았습니다! (정확도 기반 필터링 적용)`);
                     renderResults(data);
                 }
 
             } catch (error) {
                 console.error('Error:', error);
-                showDebug(`Error caught: ${error.message}`);
                 showApiStatus('error', `API 서버 오류: ${error.message}`);
                 document.getElementById('emptyState').classList.remove('hidden');
             } finally {
@@ -271,18 +274,20 @@
                 document.getElementById('avgPrice').textContent = formatPrice(summary.avgPrice);
                 document.getElementById('totalCount').textContent = summary.totalCount + '개';
                 document.getElementById('freeShipping').textContent = summary.freeShippingRate + '%';
+                document.getElementById('avgRelevance').textContent = (summary.avgRelevance || 0).toFixed(1) + '점';
                 document.getElementById('summary').classList.remove('hidden');
             }
 
             // 업데이트 시간
             const updateTime = new Date(data.updatedAt).toLocaleString('ko-KR');
-            document.getElementById('updateTime').textContent = `마지막 업데이트: ${updateTime}`;
+            document.getElementById('updateTime').textContent = `마지막 업데이트: ${updateTime} | 검색 방식: ${data.searchMethod === 'advanced' ? 'AI 고급 검색' : '기본 검색'}`;
 
             // 테이블 렌더링
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = products.map((item, index) => `
                 <tr class="border-b hover:bg-gray-50 fade-in">
                     <td class="px-4 py-3">${getRankBadge(index)}</td>
+                    <td class="px-4 py-3">${getRelevanceBadge(item.relevanceScore || 0)}</td>
                     <td class="px-4 py-3">
                         <span class="px-3 py-1 bg-gray-100 rounded-full text-sm font-semibold">
                             ${item.shop}
@@ -320,12 +325,14 @@
             // 분석 텍스트
             const priceDiff = products[products.length - 1].finalPrice - products[0].finalPrice;
             const freeShippingCount = products.filter(p => p.shipping === 0).length;
+            const avgRelevance = summary.avgRelevance || 0;
             
             document.getElementById('analysisText').innerHTML = `
                 <li><strong>최저실현가:</strong> ${products[0].shop}에서 ${formatPrice(products[0].finalPrice)}</li>
                 <li><strong>가격 범위:</strong> ${formatPrice(products[0].finalPrice)} ~ ${formatPrice(products[products.length - 1].finalPrice)}</li>
                 <li><strong>가격 차이:</strong> ${formatPrice(priceDiff)} (${((priceDiff/products[0].finalPrice)*100).toFixed(1)}%)</li>
                 <li><strong>무료배송:</strong> ${freeShippingCount}개 / ${products.length}개 (${summary.freeShippingRate}%)</li>
+                <li><strong>평균 정확도:</strong> ${avgRelevance.toFixed(1)}점 (50점 이상만 표시)</li>
             `;
 
             document.getElementById('resultsTable').classList.remove('hidden');
@@ -333,26 +340,20 @@
 
         // 페이지 로드 시 API 상태 체크
         async function checkApiStatus() {
-            showDebug('Checking API status...');
             try {
                 const response = await fetch(`${API_BASE_URL}/health`);
-                showDebug(`Health check status: ${response.status}`);
                 if (response.ok) {
-                    const data = await response.json();
                     showApiStatus('success', 'API 서버 연결 완료');
-                    showDebug(`API healthy: ${JSON.stringify(data)}`);
                 } else {
                     throw new Error('API not responding');
                 }
             } catch (error) {
-                showDebug(`Health check failed: ${error.message}`);
                 showApiStatus('error', 'API 서버가 실행되지 않았습니다. backend/run_api.bat을 실행하세요.');
             }
         }
 
         // 초기화
         window.addEventListener('load', () => {
-            showDebug('Page loaded');
             checkApiStatus();
         });
     </script>
